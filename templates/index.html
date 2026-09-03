@@ -25,15 +25,42 @@
     .rdp-trans:hover { opacity: 0.75; filter: drop-shadow(0 0 4px rgba(30,41,59,0.3)); }
     .rdp-trans.disabled { fill: #cbd5e1; stroke: #cbd5e1; cursor: not-allowed; }
     .rdp-trans.disabled:hover { opacity: 1; filter: none; }
-    .rdp-arc { fill: none; stroke: #64748b; stroke-width: 1.5; }
+    .rdp-trans.firing { fill: #4f46e5 !important; stroke: #4f46e5 !important; }
+
+    /* --- Arcs : animation de flux permanente (pointillés qui défilent) --- */
+    .rdp-arc {
+      fill: none;
+      stroke: #94a3b8;
+      stroke-width: 2;
+      stroke-dasharray: 6 6;
+      opacity: 0.6;
+      animation: arc-move 1.6s linear infinite;
+    }
+    .rdp-arc.arc-active {
+      stroke: #4f46e5;
+      stroke-width: 2.5;
+      opacity: 1;
+      animation-duration: 0.55s;
+      filter: drop-shadow(0 0 3px rgba(79,70,229,0.45));
+    }
+    @keyframes arc-move {
+      to { stroke-dashoffset: -24; }
+    }
+    /* petit jeton qui parcourt un arc lors d'un franchissement */
+    .flow-dot {
+      fill: #4f46e5;
+      filter: drop-shadow(0 0 5px rgba(79,70,229,0.85));
+    }
+
     .rdp-token {
       fill: #0f172a;
       transition: cx 0.45s cubic-bezier(0.4, 0, 0.2, 1),
                   cy 0.45s cubic-bezier(0.4, 0, 0.2, 1),
                   opacity 0.3s ease;
     }
-    .rdp-label { font-size: 14px; fill: #334155; text-anchor: middle; font-family: 'Inter', sans-serif; font-weight: 600; }
-    .rdp-sublabel { font-size: 11px; fill: #64748b; text-anchor: middle; font-family: 'Inter', sans-serif; }
+    .rdp-label { font-size: 16px; fill: #1e293b; text-anchor: middle; font-family: 'Inter', sans-serif; font-weight: 700; }
+    .rdp-sublabel { font-size: 12px; fill: #64748b; text-anchor: middle; font-family: 'Inter', sans-serif; font-weight: 500; }
+    .rdp-tlabel { font-size: 11px; fill: #94a3b8; text-anchor: middle; font-family: 'Inter', sans-serif; font-weight: 600; }
     .bulb { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
     .bulb-red.on { background-color: #ef4444; border-color: #ef4444; box-shadow: 0 0 24px rgba(239,68,68,0.45); }
     .bulb-orange.on { background-color: #f59e0b; border-color: #f59e0b; box-shadow: 0 0 24px rgba(245,158,11,0.45); }
@@ -43,22 +70,27 @@
     @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     .history-item { animation: slideIn 0.25s ease; }
     @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* Respecte les préférences de mouvement réduit */
+    @media (prefers-reduced-motion: reduce) {
+      .rdp-arc { animation: none; opacity: 0.75; }
+    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen">
 
   <!-- Header -->
   <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3 flex-wrap">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white font-bold text-lg">RdP</div>
+        <div class="w-9 h-9 sm:w-10 sm:h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white font-bold text-base sm:text-lg shrink-0">RdP</div>
         <div>
-          <h1 class="text-lg font-semibold text-slate-900 leading-tight">Feu Tricolore</h1>
-          <p class="text-xs text-slate-500">Réseau de Petri — Simulation interactive</p>
+          <h1 class="text-base sm:text-lg font-semibold text-slate-900 leading-tight">Feu Tricolore</h1>
+          <p class="text-xs text-slate-500 hidden sm:block">Réseau de Petri — Simulation interactive</p>
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <span id="conn-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span id="conn-badge" class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
           Connecté
         </span>
@@ -66,122 +98,100 @@
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-6 py-8">
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
 
       <!-- Left: SVG RdP -->
       <div class="lg:col-span-7">
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div class="px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between gap-2 flex-wrap">
             <h2 class="text-sm font-semibold text-slate-700 flex items-center gap-2">
               <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
               Réseau de Petri
             </h2>
-            <span class="text-xs text-slate-400 font-mono">M₀ = (1,0,0,0,1,0,0)</span>
+            <span class="text-[11px] sm:text-xs text-slate-400 font-mono">M₀ = (1,0,0,0)</span>
           </div>
-          <div class="p-6 flex justify-center bg-slate-50/50">
-            <svg id="rdp-svg" viewBox="0 0 520 420" class="w-full max-w-xl" style="max-height: 480px;">
+          <div class="p-3 sm:p-6 flex justify-center bg-slate-50/50">
+            <svg id="rdp-svg" viewBox="0 0 440 430" class="w-full max-w-lg" style="max-height: 480px;">
               <defs>
-                <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
-                  <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+                <marker id="arr" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#64748b"/>
+                </marker>
+                <marker id="arr-active" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#4f46e5"/>
                 </marker>
               </defs>
 
-              <!-- Arcs -->
-              <line class="rdp-arc" x1="150" y1="86" x2="150" y2="120" marker-end="url(#arr)"/>
-              <line class="rdp-arc" x1="150" y1="134" x2="150" y2="154" marker-end="url(#arr)"/>
-              <line class="rdp-arc" x1="150" y1="206" x2="250" y2="120" marker-end="url(#arr)"/>
-              <line class="rdp-arc" x1="270" y1="120" x2="390" y2="86" marker-end="url(#arr)"/>
-              <line class="rdp-arc" x1="390" y1="86" x2="390" y2="120" marker-end="url(#arr)"/>
-              <line class="rdp-arc" x1="390" y1="134" x2="390" y2="154" marker-end="url(#arr)"/>
-              <line class="rdp-arc" x1="390" y1="206" x2="270" y2="230" marker-end="url(#arr)"/>
-              <line class="rdp-arc" x1="250" y1="230" x2="150" y2="86" marker-end="url(#arr)"/>
-
-              <line class="rdp-arc" x1="270" y1="254" x2="150" y2="120" marker-end="url(#arr)"/>
-              <line class="rdp-arc" x1="250" y1="244" x2="270" y2="254" marker-end="url(#arr)"/>
-
-              <line class="rdp-arc" x1="270" y1="306" x2="210" y2="320" marker-end="url(#arr)"/>
-              <line class="rdp-arc" x1="210" y1="334" x2="150" y2="334" marker-end="url(#arr)"/>
-              <line class="rdp-arc" x1="176" y1="360" x2="250" y2="360" marker-end="url(#arr)"/>
-              <line class="rdp-arc" x1="290" y1="360" x2="364" y2="360" marker-end="url(#arr)"/>
-              <line class="rdp-arc" x1="390" y1="334" x2="350" y2="320" marker-end="url(#arr)"/>
-              <line class="rdp-arc" x1="330" y1="320" x2="270" y2="306" marker-end="url(#arr)"/>
+              <!-- Arcs : cycle P1 -> T1 -> P3 -> T2 -> P2 -> T3 -> P4 -> T4 -> P1 -->
+              <path id="arc1" class="rdp-arc" d="M241,76 L291,125" marker-end="url(#arr)"/>
+              <path id="arc2" class="rdp-arc" d="M305,139 L354,189" marker-end="url(#arr)"/>
+              <path id="arc3" class="rdp-arc" d="M354,231 L305,281" marker-end="url(#arr)"/>
+              <path id="arc4" class="rdp-arc" d="M291,295 L241,344" marker-end="url(#arr)"/>
+              <path id="arc5" class="rdp-arc" d="M199,344 L149,295" marker-end="url(#arr)"/>
+              <path id="arc6" class="rdp-arc" d="M135,281 L85,231" marker-end="url(#arr)"/>
+              <path id="arc7" class="rdp-arc" d="M85,189 L135,139" marker-end="url(#arr)"/>
+              <path id="arc8" class="rdp-arc" d="M149,125 L199,76" marker-end="url(#arr)"/>
 
               <!-- Places -->
-              <circle class="rdp-place" cx="150" cy="60" r="26"/>
-              <circle class="rdp-place" cx="390" cy="60" r="26"/>
-              <circle class="rdp-place" cx="150" cy="180" r="26"/>
-              <circle class="rdp-place" cx="390" cy="180" r="26"/>
-              <circle class="rdp-place" cx="270" cy="280" r="26"/>
-              <circle class="rdp-place" cx="150" cy="360" r="26"/>
-              <circle class="rdp-place" cx="390" cy="360" r="26"/>
+              <circle class="rdp-place" cx="220" cy="55" r="30"/>
+              <circle class="rdp-place" cx="375" cy="210" r="30"/>
+              <circle class="rdp-place" cx="220" cy="365" r="30"/>
+              <circle class="rdp-place" cx="65" cy="210" r="30"/>
 
               <!-- Labels -->
-              <text class="rdp-label" x="150" y="22">P₁</text>
-              <text class="rdp-sublabel" x="150" y="36">Rouge</text>
-              <text class="rdp-label" x="390" y="22">P₂</text>
-              <text class="rdp-sublabel" x="390" y="36">Orange</text>
-              <text class="rdp-label" x="150" y="142">P₃</text>
-              <text class="rdp-sublabel" x="150" y="156">Vert</text>
-              <text class="rdp-label" x="390" y="142">P₄</text>
-              <text class="rdp-sublabel" x="390" y="156">Attente</text>
-              <text class="rdp-label" x="270" y="248">P₅</text>
-              <text class="rdp-sublabel" x="270" y="262">Séquenceur</text>
-              <text class="rdp-label" x="150" y="328">P₆</text>
-              <text class="rdp-sublabel" x="150" y="342">Piéton attente</text>
-              <text class="rdp-label" x="390" y="328">P₇</text>
-              <text class="rdp-sublabel" x="390" y="342">Piéton OK</text>
+              <text class="rdp-label" x="220" y="17">P₁</text>
+              <text class="rdp-sublabel" x="220" y="33">Rouge</text>
+
+              <text class="rdp-label" x="375" y="155">P₃</text>
+              <text class="rdp-sublabel" x="375" y="171">Orange</text>
+
+              <text class="rdp-label" x="220" y="410">P₂</text>
+              <text class="rdp-sublabel" x="220" y="394">Vert</text>
+
+              <text class="rdp-label" x="65" y="155">P₄</text>
+              <text class="rdp-sublabel" x="65" y="171">Orange</text>
 
               <!-- Transitions -->
-              <rect id="T1" class="rdp-trans" x="130" y="120" width="40" height="14" rx="2"/>
-              <rect id="T2" class="rdp-trans" x="250" y="120" width="40" height="14" rx="2"/>
-              <rect id="T3" class="rdp-trans" x="370" y="120" width="40" height="14" rx="2"/>
-              <rect id="T4" class="rdp-trans" x="250" y="230" width="40" height="14" rx="2"/>
-              <rect id="T5" class="rdp-trans" x="190" y="320" width="40" height="14" rx="2"/>
-              <rect id="T6" class="rdp-trans" x="250" y="360" width="40" height="14" rx="2"/>
-              <rect id="T7" class="rdp-trans" x="330" y="320" width="40" height="14" rx="2"/>
+              <rect id="T1" class="rdp-trans" x="276" y="124" width="44" height="16" rx="3"/>
+              <rect id="T2" class="rdp-trans" x="276" y="280" width="44" height="16" rx="3"/>
+              <rect id="T3" class="rdp-trans" x="120" y="280" width="44" height="16" rx="3"/>
+              <rect id="T4" class="rdp-trans" x="120" y="124" width="44" height="16" rx="3"/>
 
               <!-- Trans labels -->
-              <text class="rdp-sublabel" x="150" y="114" style="font-size:10px;fill:#94a3b8;">T₁</text>
-              <text class="rdp-sublabel" x="270" y="114" style="font-size:10px;fill:#94a3b8;">T₂</text>
-              <text class="rdp-sublabel" x="390" y="114" style="font-size:10px;fill:#94a3b8;">T₃</text>
-              <text class="rdp-sublabel" x="270" y="224" style="font-size:10px;fill:#94a3b8;">T₄</text>
-              <text class="rdp-sublabel" x="210" y="314" style="font-size:10px;fill:#94a3b8;">T₅</text>
-              <text class="rdp-sublabel" x="270" y="354" style="font-size:10px;fill:#94a3b8;">T₆</text>
-              <text class="rdp-sublabel" x="350" y="314" style="font-size:10px;fill:#94a3b8;">T₇</text>
+              <text class="rdp-tlabel" x="298" y="118">T₁ · Rouge→Orange</text>
+              <text class="rdp-tlabel" x="298" y="312">T₂ · Orange→Vert</text>
+              <text class="rdp-tlabel" x="142" y="312">T₃ · Vert→Orange</text>
+              <text class="rdp-tlabel" x="142" y="118">T₄ · Orange→Rouge</text>
 
               <!-- Tokens -->
-              <circle id="tok-P1" class="rdp-token" cx="150" cy="60" r="7"/>
-              <circle id="tok-P2" class="rdp-token" cx="390" cy="60" r="7" style="opacity:0"/>
-              <circle id="tok-P3" class="rdp-token" cx="150" cy="180" r="7" style="opacity:0"/>
-              <circle id="tok-P4" class="rdp-token" cx="390" cy="180" r="7" style="opacity:0"/>
-              <circle id="tok-P5" class="rdp-token" cx="270" cy="280" r="7"/>
-              <circle id="tok-P6" class="rdp-token" cx="150" cy="360" r="7" style="opacity:0"/>
-              <circle id="tok-P7" class="rdp-token" cx="390" cy="360" r="7" style="opacity:0"/>
+              <circle id="tok-P1" class="rdp-token" cx="220" cy="55" r="7"/>
+              <circle id="tok-P2" class="rdp-token" cx="220" cy="365" r="7" style="opacity:0"/>
+              <circle id="tok-P3" class="rdp-token" cx="375" cy="210" r="7" style="opacity:0"/>
+              <circle id="tok-P4" class="rdp-token" cx="65" cy="210" r="7" style="opacity:0"/>
             </svg>
           </div>
-          <div class="px-5 py-3 bg-slate-50 border-t border-slate-100">
-            <div class="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+          <div class="px-4 sm:px-5 py-3 bg-slate-50 border-t border-slate-100">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-4 text-[11px] sm:text-xs text-slate-500">
               <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full border-2 border-slate-800 bg-white"></span> Place</div>
               <div class="flex items-center gap-1.5"><span class="w-4 h-2 bg-slate-800 rounded-sm"></span> Transition</div>
               <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-900"></span> Jeton</div>
-              <div class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-slate-500"></span> Arc</div>
-              <span class="ml-auto text-slate-400">Clique sur une transition noire pour la franchir</span>
+              <div class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-indigo-500"></span> Arc actif</div>
+              <span class="hidden sm:inline ml-auto text-slate-400">Clique sur une transition noire pour la franchir</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Right: Controls & Viz -->
-      <div class="lg:col-span-5 space-y-5">
+      <div class="lg:col-span-5 space-y-4 sm:space-y-5">
 
         <!-- Traffic Light -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5">
           <h3 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
             <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
             Feu de circulation
           </h3>
-          <div class="flex items-center justify-center gap-8">
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
             <div class="flex flex-col items-center gap-2">
               <div class="w-16 p-3 rounded-2xl border-2 border-slate-800 bg-white flex flex-col items-center gap-2.5">
                 <div id="bulb-red" class="bulb bulb-red w-10 h-10 rounded-full border-2 border-slate-300 on"></div>
@@ -192,20 +202,17 @@
                 <div class="text-[10px] text-slate-400 font-medium">Vert</div>
               </div>
             </div>
-            <div class="space-y-3">
+            <div class="space-y-3 text-center sm:text-left">
               <div id="status-feux" class="text-sm font-semibold text-slate-800">État : <span class="text-red-500">Rouge</span></div>
-              <div id="status-pieton" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-500">
-                <span>⏸</span> Aucun piéton
-              </div>
             </div>
           </div>
         </div>
 
         <!-- Marking -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5">
           <h3 class="text-sm font-semibold text-slate-700 mb-3">Marquage courant</h3>
-          <div id="marking-display" class="font-mono text-sm bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-700">
-            M = (1, 0, 0, 0, 1, 0, 0)
+          <div id="marking-display" class="font-mono text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-700 overflow-x-auto whitespace-nowrap">
+            M = (1, 0, 0, 0)
           </div>
           <div id="enabled-display" class="mt-2 text-xs text-slate-500">
             <span class="font-medium text-slate-700">Sensibilisées :</span> T₁ (Rouge → Vert)
@@ -213,23 +220,20 @@
         </div>
 
         <!-- Controls -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5">
           <h3 class="text-sm font-semibold text-slate-700 mb-3">Contrôles</h3>
           <div class="grid grid-cols-2 gap-2">
-            <button onclick="fire('T1')" class="px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">T₁ : Rouge→Vert</button>
-            <button onclick="fire('T2')" class="px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">T₂ : Vert→Orange</button>
-            <button onclick="fire('T3')" class="px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">T₃ : Orange→Attente</button>
-            <button onclick="fire('T4')" class="px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">T₄ : Attente→Rouge</button>
-            <button onclick="fire('T5')" class="px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">T₅ : Demande piéton</button>
-            <button onclick="fire('T6')" class="px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">T₆ : Piéton traverse</button>
-            <button onclick="fire('T7')" class="px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">T₇ : Fin traversée</button>
+            <button onclick="fire('T1')" class="px-2.5 sm:px-3 py-2 rounded-lg border border-slate-200 text-[11px] sm:text-xs font-medium text-slate-700 hover:bg-slate-50 transition">T₁ : Rouge→Orange</button>
+            <button onclick="fire('T2')" class="px-2.5 sm:px-3 py-2 rounded-lg border border-slate-200 text-[11px] sm:text-xs font-medium text-slate-700 hover:bg-slate-50 transition">T₂ : Orange→Vert</button>
+            <button onclick="fire('T3')" class="px-2.5 sm:px-3 py-2 rounded-lg border border-slate-200 text-[11px] sm:text-xs font-medium text-slate-700 hover:bg-slate-50 transition">T₃ : Vert→Orange</button>
+            <button onclick="fire('T4')" class="px-2.5 sm:px-3 py-2 rounded-lg border border-slate-200 text-[11px] sm:text-xs font-medium text-slate-700 hover:bg-slate-50 transition">T₄ : Orange→Rouge</button>
           </div>
           <div class="flex gap-2 mt-3">
-            <button id="btn-auto" onclick="toggleAuto()" class="flex-1 px-4 py-2.5 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition flex items-center justify-center gap-2">
-              <svg id="icon-auto" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>
+            <button id="btn-auto" onclick="toggleAuto()" class="flex-1 px-3 sm:px-4 py-2.5 rounded-lg bg-slate-900 text-white text-xs sm:text-sm font-medium hover:bg-slate-800 transition flex items-center justify-center gap-2">
+              <svg id="icon-auto" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>
               <span id="txt-auto">Simulation auto</span>
             </button>
-            <button onclick="resetRDP()" class="px-4 py-2.5 rounded-lg border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition">
+            <button onclick="resetRDP()" class="px-3 sm:px-4 py-2.5 rounded-lg border border-red-200 text-red-600 text-xs sm:text-sm font-medium hover:bg-red-50 transition shrink-0">
               ↺ Reset
             </button>
           </div>
@@ -238,10 +242,10 @@
     </div>
 
     <!-- Bottom row -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-6">
       <!-- History -->
       <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between gap-2 flex-wrap">
           <h3 class="text-sm font-semibold text-slate-700 flex items-center gap-2">
             <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Historique des franchissements
@@ -249,13 +253,13 @@
           <span id="history-count" class="text-xs text-slate-400 font-mono">0 événement</span>
         </div>
         <div id="history-list" class="p-0 max-h-64 overflow-y-auto">
-          <div class="px-5 py-8 text-center text-sm text-slate-400">Aucun franchissement pour le moment</div>
+          <div class="px-4 sm:px-5 py-8 text-center text-sm text-slate-400">Aucun franchissement pour le moment</div>
         </div>
       </div>
 
       <!-- Export -->
       <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between gap-2 flex-wrap">
           <h3 class="text-sm font-semibold text-slate-700 flex items-center gap-2">
             <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Export JSON
@@ -264,18 +268,19 @@
         </div>
         <div class="p-0">
           <pre id="export-code" class="max-h-64 overflow-auto p-4 text-xs font-mono text-slate-600 bg-slate-50 m-0 hidden"></pre>
-          <div id="export-placeholder" class="px-5 py-8 text-center text-sm text-slate-400">Clique sur "Générer" pour exporter l'état du réseau</div>
+          <div id="export-placeholder" class="px-4 sm:px-5 py-8 text-center text-sm text-slate-400">Clique sur "Générer" pour exporter l'état du réseau</div>
         </div>
       </div>
     </div>
 
     <!-- Footer info -->
-    <div class="mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+    <div class="mt-4 sm:mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5">
       <h4 class="text-sm font-semibold text-slate-700 mb-2">Description du modèle</h4>
       <p class="text-xs text-slate-500 leading-relaxed">
-        Ce réseau de Petri modélise un <strong>feu tricolore avec gestion piéton</strong> synchronisé par un séquenceur <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-mono">P₅</code>.
-        Le cycle feu est <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-mono">Rouge → Vert → Orange → Attente → Rouge</code>.
-        Le piéton peut demander le passage (<code class="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-mono">T₅</code>), traverse uniquement au rouge (<code class="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-mono">T₆</code>), puis rend le séquenceur (<code class="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-mono">T₇</code>).
+        Ce réseau de Petri modélise le <strong>cycle d'un feu tricolore réaliste</strong> :
+        <code class="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-mono">Rouge → Orange → Vert → Orange → Rouge</code>.
+        Un seul jeton circule dans le réseau : à chaque instant, une seule place est marquée, donc <strong>une seule ampoule est allumée</strong> — jamais deux couleurs en même temps, jamais aucune.
+        Chaque transition (T₁ à T₄) ne peut être franchie que lorsque la place précédente contient un jeton, garantissant un cycle unique et séquentiel.
         Le réseau est <strong>vivant</strong>, <strong>sûr</strong> (1-borne) et <strong>réversible</strong>.
       </p>
     </div>
@@ -283,11 +288,80 @@
 
   <script>
     const placeCoords = {
-      P1: [150, 60], P2: [390, 60], P3: [150, 180], P4: [390, 180],
-      P5: [270, 280], P6: [150, 360], P7: [390, 360]
+      P1: [220, 55], P2: [220, 365], P3: [375, 210], P4: [65, 210]
     };
+
+    // Association arc -> transition, pour l'animation et le style "actif"
+    const ARC_MAP = {
+      T1: { in: ['arc1'], out: ['arc2'] },
+      T2: { in: ['arc3'], out: ['arc4'] },
+      T3: { in: ['arc5'], out: ['arc6'] },
+      T4: { in: ['arc7'], out: ['arc8'] },
+    };
+
     let autoTimer = null;
     let isAuto = false;
+
+    // Fait glisser un petit jeton le long d'un arc (path SVG) pour visualiser le flux
+    function flowAlong(pathId, duration = 900, delay = 0) {
+      const path = document.getElementById(pathId);
+      const svg = document.getElementById('rdp-svg');
+      if (!path || !svg) return;
+      setTimeout(() => {
+        const len = path.getTotalLength();
+        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        dot.setAttribute('r', '5');
+        dot.setAttribute('class', 'flow-dot token-enter');
+        svg.appendChild(dot);
+        const start = performance.now();
+        function step(now) {
+          const t = Math.min((now - start) / duration, 1);
+          const pt = path.getPointAtLength(t * len);
+          dot.setAttribute('cx', pt.x);
+          dot.setAttribute('cy', pt.y);
+          if (t > 0.85) dot.style.opacity = String(1 - (t - 0.85) / 0.15);
+          if (t < 1) {
+            requestAnimationFrame(step);
+          } else {
+            dot.remove();
+          }
+        }
+        requestAnimationFrame(step);
+      }, delay);
+    }
+
+    // Anime le franchissement complet d'une transition : jeton entrant puis sortant
+    function animateTransition(tid) {
+      const map = ARC_MAP[tid];
+      const rect = document.getElementById(tid);
+      if (map) {
+        map.in.forEach(id => flowAlong(id, 900, 0));
+        map.out.forEach(id => flowAlong(id, 900, 600));
+      }
+      if (rect) {
+        rect.classList.add('firing');
+        setTimeout(() => rect.classList.remove('firing'), 1500);
+      }
+    }
+
+    // Met en surbrillance les arcs d'entrée des transitions actuellement sensibilisées
+    function updateArcStates(enabled) {
+      document.querySelectorAll('.rdp-arc').forEach(a => {
+        a.classList.remove('arc-active');
+        a.setAttribute('marker-end', 'url(#arr)');
+      });
+      enabled.forEach(tid => {
+        const map = ARC_MAP[tid];
+        if (!map) return;
+        map.in.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.classList.add('arc-active');
+            el.setAttribute('marker-end', 'url(#arr-active)');
+          }
+        });
+      });
+    }
 
     async function fetchState() {
       try {
@@ -305,7 +379,7 @@
       const enabled = data.enabled;
 
       // Tokens
-      for (let i = 1; i <= 7; i++) {
+      for (let i = 1; i <= 4; i++) {
         const tok = document.getElementById('tok-P' + i);
         if (!tok) continue;
         const p = 'P' + i;
@@ -320,7 +394,7 @@
       }
 
       // Transitions
-      for (const tid of ['T1','T2','T3','T4','T5','T6','T7']) {
+      for (const tid of ['T1','T2','T3','T4']) {
         const el = document.getElementById(tid);
         if (!el) continue;
         if (enabled.includes(tid)) {
@@ -338,6 +412,9 @@
         }
       }
 
+      // Arcs (flux permanent + surbrillance des arcs prêts à être franchis)
+      updateArcStates(enabled);
+
       // Bulbs
       const br = document.getElementById('bulb-red');
       const bo = document.getElementById('bulb-orange');
@@ -346,33 +423,22 @@
       bo.classList.remove('on');
       bg.classList.remove('on');
 
+      // Mapping strict place -> couleur : P1=Rouge, P2=Vert, P3 et P4=Orange (avant vert / avant rouge)
+      // Un seul jeton circule dans le cycle, donc une seule place est marquée -> une seule ampoule s'allume.
       let statusText = '—';
       let statusColor = 'text-slate-400';
       if (places.P1 > 0) { br.classList.add('on'); statusText = 'Rouge'; statusColor = 'text-red-500'; }
-      else if (places.P2 > 0) { bo.classList.add('on'); statusText = 'Orange'; statusColor = 'text-amber-500'; }
-      else if (places.P3 > 0) { bg.classList.add('on'); statusText = 'Vert'; statusColor = 'text-emerald-500'; }
-      else if (places.P4 > 0) { statusText = 'Attente'; statusColor = 'text-slate-500'; }
+      else if (places.P2 > 0) { bg.classList.add('on'); statusText = 'Vert'; statusColor = 'text-emerald-500'; }
+      else if (places.P3 > 0) { bo.classList.add('on'); statusText = 'Orange (→ Vert)'; statusColor = 'text-amber-500'; }
+      else if (places.P4 > 0) { bo.classList.add('on'); statusText = 'Orange (→ Rouge)'; statusColor = 'text-amber-500'; }
       document.getElementById('status-feux').innerHTML = 'État : <span class="' + statusColor + '">' + statusText + '</span>';
 
-      // Pieton
-      const pietonEl = document.getElementById('status-pieton');
-      if (places.P6 > 0) {
-        pietonEl.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200';
-        pietonEl.innerHTML = '<span>🚶</span> En attente';
-      } else if (places.P7 > 0) {
-        pietonEl.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200';
-        pietonEl.innerHTML = '<span>✅</span> Peut traverser';
-      } else {
-        pietonEl.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-500';
-        pietonEl.innerHTML = '<span>⏸</span> Aucun piéton';
-      }
-
       // Marking
-      const m = [places.P1, places.P2, places.P3, places.P4, places.P5, places.P6, places.P7];
+      const m = [places.P1, places.P2, places.P3, places.P4];
       document.getElementById('marking-display').textContent = 'M = (' + m.join(', ') + ')';
 
       // Enabled
-      const names = {T1:'Rouge→Vert', T2:'Vert→Orange', T3:'Orange→Attente', T4:'Attente→Rouge', T5:'Demande piéton', T6:'Piéton traverse', T7:'Fin traversée'};
+      const names = {T1:'Rouge→Orange', T2:'Orange→Vert', T3:'Vert→Orange', T4:'Orange→Rouge'};
       document.getElementById('enabled-display').innerHTML = '<span class="font-medium text-slate-700">Sensibilisées :</span> ' +
         (enabled.length ? enabled.map(t => 'T' + t.slice(1) + ' (' + names[t] + ')').join(', ') : '<span class="text-slate-400">Aucune</span>');
 
@@ -382,8 +448,8 @@
       if (data.history && data.history.length > 0) {
         hcount.textContent = data.history.length + ' événement' + (data.history.length > 1 ? 's' : '');
         hlist.innerHTML = data.history.slice().reverse().map((h, idx) => {
-          const mark = '(' + [h.marking.P1, h.marking.P2, h.marking.P3, h.marking.P4, h.marking.P5, h.marking.P6, h.marking.P7].join(',') + ')';
-          return '<div class="history-item px-5 py-2.5 border-b border-slate-50 last:border-0 flex items-center justify-between hover:bg-slate-50 transition">' +
+          const mark = '(' + [h.marking.P1, h.marking.P2, h.marking.P3, h.marking.P4].join(',') + ')';
+          return '<div class="history-item px-4 sm:px-5 py-2.5 border-b border-slate-50 last:border-0 flex items-center justify-between gap-2 flex-wrap hover:bg-slate-50 transition">' +
             '<div class="flex items-center gap-3">' +
               '<span class="text-[10px] font-mono text-slate-400 w-6">' + (data.history.length - idx) + '</span>' +
               '<span class="text-xs font-medium text-slate-700">T' + h.transition.slice(1) + '</span>' +
@@ -397,19 +463,25 @@
         }).join('');
       } else {
         hcount.textContent = '0 événement';
-        hlist.innerHTML = '<div class="px-5 py-8 text-center text-sm text-slate-400">Aucun franchissement pour le moment</div>';
+        hlist.innerHTML = '<div class="px-4 sm:px-5 py-8 text-center text-sm text-slate-400">Aucun franchissement pour le moment</div>';
       }
     }
 
     async function fire(tid) {
       try {
+        animateTransition(tid);
         const res = await fetch('/api/fire', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({transition: tid})
         });
         const data = await res.json();
-        if (data.success) renderState(data);
+        if (data.success) {
+          // laisse le temps au jeton de "voyager" le long des arcs avant de replacer les jetons de places
+          setTimeout(() => renderState(data), 1500);
+        } else {
+          renderState(data);
+        }
       } catch (e) { console.error(e); }
     }
 

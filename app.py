@@ -7,40 +7,26 @@ app = Flask(__name__)
 # État global du réseau de Petri (thread-safe)
 state_lock = threading.Lock()
 rdp_state = {
-    "places": {"P1": 1, "P2": 0, "P3": 0, "P4": 0, "P5": 1, "P6": 0, "P7": 0},
+    "places": {"P1": 1, "P2": 0, "P3": 0, "P4": 0},
     "history": [],
     "auto_running": False,
 }
 
 TRANSITIONS = {
-    "T1": {"in": {"P1": 1, "P5": 1}, "out": {"P3": 1}, "name": "Rouge → Vert"},
-    "T2": {"in": {"P3": 1}, "out": {"P2": 1}, "name": "Vert → Orange"},
-    "T3": {"in": {"P2": 1}, "out": {"P4": 1}, "name": "Orange → Attente"},
-    "T4": {"in": {"P4": 1}, "out": {"P1": 1, "P5": 1}, "name": "Attente → Rouge"},
-    "T5": {"in": {"P5": 1}, "out": {"P6": 1}, "name": "Demande piéton"},
-    "T6": {"in": {"P6": 1, "P1": 1}, "out": {"P7": 1}, "name": "Piéton traverse"},
-    "T7": {"in": {"P7": 1}, "out": {"P5": 1}, "name": "Fin traversée"},
+    "T1": {"in": {"P1": 1}, "out": {"P3": 1}, "name": "Rouge → Orange"},
+    "T2": {"in": {"P3": 1}, "out": {"P2": 1}, "name": "Orange → Vert"},
+    "T3": {"in": {"P2": 1}, "out": {"P4": 1}, "name": "Vert → Orange"},
+    "T4": {"in": {"P4": 1}, "out": {"P1": 1}, "name": "Orange → Rouge"},
 }
 
 PLACE_META = {
-    "P1": {"label": "P₁", "desc": "Rouge", "x": 150, "y": 60},
-    "P2": {"label": "P₂", "desc": "Orange", "x": 390, "y": 60},
-    "P3": {"label": "P₃", "desc": "Vert", "x": 150, "y": 180},
-    "P4": {"label": "P₄", "desc": "Attente", "x": 390, "y": 180},
-    "P5": {"label": "P₅", "desc": "Séquenceur", "x": 270, "y": 280},
-    "P6": {"label": "P₆", "desc": "Piéton attente", "x": 150, "y": 360},
-    "P7": {"label": "P₇", "desc": "Piéton OK", "x": 390, "y": 360},
+    "P1": {"label": "P₁", "desc": "Rouge"},
+    "P2": {"label": "P₂", "desc": "Vert"},
+    "P3": {"label": "P₃", "desc": "Orange"},
+    "P4": {"label": "P₄", "desc": "Orange"},
 }
 
-TRANS_META = {
-    "T1": {"x": 130, "y": 120, "w": 40, "h": 14},
-    "T2": {"x": 250, "y": 120, "w": 40, "h": 14},
-    "T3": {"x": 370, "y": 120, "w": 40, "h": 14},
-    "T4": {"x": 250, "y": 230, "w": 40, "h": 14},
-    "T5": {"x": 190, "y": 320, "w": 40, "h": 14},
-    "T6": {"x": 250, "y": 360, "w": 40, "h": 14},
-    "T7": {"x": 330, "y": 320, "w": 40, "h": 14},
-}
+INITIAL_MARKING = {"P1": 1, "P2": 0, "P3": 0, "P4": 0}
 
 
 def is_enabled(tid, places):
@@ -112,7 +98,7 @@ def api_fire():
 def api_reset():
     global rdp_state
     with state_lock:
-        rdp_state["places"] = {"P1": 1, "P2": 0, "P3": 0, "P4": 0, "P5": 1, "P6": 0, "P7": 0}
+        rdp_state["places"] = dict(INITIAL_MARKING)
         rdp_state["history"] = []
         rdp_state["auto_running"] = False
     return jsonify({
@@ -132,7 +118,7 @@ def api_export():
                 k: {"name": v["name"], "pre": v["in"], "post": v["out"]}
                 for k, v in TRANSITIONS.items()
             },
-            "marking_initial": {"P1": 1, "P2": 0, "P3": 0, "P4": 0, "P5": 1, "P6": 0, "P7": 0},
+            "marking_initial": dict(INITIAL_MARKING),
             "marking_courant": dict(rdp_state["places"]),
             "historique": rdp_state["history"],
         }
@@ -140,7 +126,7 @@ def api_export():
 
 
 def auto_loop():
-    order = ["T1", "T2", "T3", "T4", "T5", "T6", "T7"]
+    order = ["T1", "T2", "T3", "T4"]
     while True:
         with state_lock:
             if not rdp_state["auto_running"]:
@@ -157,7 +143,7 @@ def auto_loop():
         if not fired:
             time.sleep(0.3)
         else:
-            time.sleep(1.0)
+            time.sleep(1.6)
 
 
 @app.route("/api/auto", methods=["POST"])
